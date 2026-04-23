@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"database/sql"
 	"flag"
 	"html/template"
@@ -61,6 +62,7 @@ func main() {
 	sessionManager := scs.New()
 	sessionManager.Store = mysqlstore.New(db)
 	sessionManager.Lifetime = 12 * time.Hour
+	sessionManager.Cookie.Secure = true
 
 	app := &application{
 		logger:         logger,
@@ -70,19 +72,28 @@ func main() {
 		sessionManager: sessionManager,
 	}
 
-	// mux := http.NewServeMux()
+	tlsConfig := &tls.Config{
+		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+		MinVersion:       tls.VersionTLS10,
+		MaxVersion:       tls.VersionTLS12,
+	}
 
-	// fileServer := http.FileServer(http.Dir("../../ui/static/"))
-	// mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
+	srv := &http.Server{
+		Addr:      cfg.addr,
+		Handler:   app.routes(),
+		ErrorLog:  slog.NewLogLogger(logger.Handler(), slog.LevelError),
+		TLSConfig: tlsConfig,
 
-	// mux.HandleFunc("GET /{$}", app.home)
-	// mux.HandleFunc("GET /snippet/view/{id}/{$}", app.snippetView)
-	// mux.HandleFunc("GET /snippet/create", app.snippetCreate)
-	// mux.HandleFunc("POST /snippet/create", app.snippetCreatePost)
+		IdleTimeout:    time.Minute,
+		ReadTimeout:    5 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 524288,
+	}
 
 	logger.Info("starting server", "addr", cfg.addr)
 
-	mainErr := http.ListenAndServe(cfg.addr, app.routes())
+	// mainErr := srv.ListenAndServe()
+	mainErr := srv.ListenAndServeTLS("../../tls/cert.pem", "../../tls/key.pem")
 	logger.Error(mainErr.Error())
 	os.Exit(1)
 }
