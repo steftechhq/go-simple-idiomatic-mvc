@@ -25,9 +25,10 @@ type config struct {
 }
 
 type application struct {
+	debug    bool // Add a new debug field.
 	logger   *slog.Logger
-	snippets *models.SnippetModel
-	users    *models.UserModel
+	snippets models.SnippetModelInterface
+	users    models.UserModelInterface
 
 	templateCache  map[string]*template.Template
 	formDecoder    *form.Decoder
@@ -40,7 +41,7 @@ func main() {
 
 	flag.StringVar(&cfg.addr, "addr", ":4000", "HTTP network address")
 	flag.StringVar(&cfg.staticDir, "static-dir", "./ui/static", "Path to static assets")
-
+	debug := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
@@ -67,6 +68,7 @@ func main() {
 	sessionManager.Cookie.Secure = true
 
 	app := &application{
+		debug:    *debug,
 		logger:   logger,
 		snippets: &models.SnippetModel{DB: db},
 		users:    &models.UserModel{DB: db},

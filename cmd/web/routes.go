@@ -27,6 +27,8 @@ func (app *application) routes() http.Handler {
 	mux.Handle("GET /user/signup", dynamic.ThenFunc(app.userSignup))
 	mux.Handle("POST /user/signup", dynamic.ThenFunc(app.userSignupPost))
 	mux.Handle("GET /user/login", dynamic.ThenFunc(app.userLogin))
+	mux.Handle("GET /about", dynamic.ThenFunc(app.aboutUs))
+
 	// Add the five new routes, all of which use our 'dynamic' middleware chain.
 	mux.Handle("POST /user/login", dynamic.ThenFunc(app.userLoginPost))
 
@@ -34,7 +36,11 @@ func (app *application) routes() http.Handler {
 
 	mux.Handle("POST /user/logout", protected.ThenFunc(app.userLogoutPost))
 	mux.Handle("GET /snippet/create", protected.ThenFunc(app.snippetCreate))
+	mux.Handle("GET /account/view", protected.ThenFunc(app.accountView))
 	mux.Handle("POST /snippet/create", protected.ThenFunc(app.snippetCreatePost))
+
+	mux.Handle("GET /account/password/update", protected.ThenFunc(app.accountPasswordUpdate))
+	mux.Handle("POST /account/password/update", protected.ThenFunc(app.accountPasswordUpdatePost))
 
 	standard := alice.New(app.recoverPanic, app.logRequest, commonHeaders)
 	return standard.Then(mux)
