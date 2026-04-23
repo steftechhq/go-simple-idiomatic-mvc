@@ -14,10 +14,14 @@ type templateData struct {
 	Snippets        []models.Snippet
 	Form            any
 	Flash           string
-	IsAuthenticated bool // Add an IsAuthenticated field to the templateData struct.
+	IsAuthenticated bool   // Add an IsAuthenticated field to the templateData struct.
+	CSRFToken       string // Add a CSRFToken field.
 }
 
 func humanDate(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
 	return t.Format("02 Jan 2006 at 15:04")
 }
 

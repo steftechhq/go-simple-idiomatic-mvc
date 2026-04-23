@@ -9,5 +9,6 @@ require (
 	github.com/go-playground/form/v4 v4.3.0 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/justinas/alice v1.2.0 // indirect
+	github.com/justinas/nosurf v1.2.0 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 )

@@ -125,7 +125,7 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 	}
 
 	app.sessionManager.Put(r.Context(), "flash", "Snippet successfully created!")
-	app.logger.Info("Create entry with id of ", id)
+	// app.logger.Info("Create entry with id of ", id)
 	http.Redirect(w, r, fmt.Sprintf("/snippet/view/%d", id), http.StatusSeeOther)
 }
 
@@ -266,4 +266,8 @@ func (app *application) userLogoutPost(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect the user to the application home page.
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func ping(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("OK"))
 }
