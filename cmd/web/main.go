@@ -1,10 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
+
+	_ "github.com/go-sql-driver/mysql" // New import
+	"snippetbox.steftech.com/internal/models"
 )
 
 type config struct {
@@ -13,7 +18,9 @@ type config struct {
 }
 
 type application struct {
-	logger *slog.Logger
+	logger        *slog.Logger
+	snippets      *models.SnippetModel
+	templateCache map[string]*template.Template
 }
 
 func main() {
@@ -24,26 +31,57 @@ func main() {
 	flag.StringVar(&cfg.staticDir, "static-dir", "./ui/static", "Path to static assets")
 
 	flag.Parse()
-
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	app := &application{
-		logger: logger,
+	// Initialize a new template cache...
+	templateCache, err := newTemplateCache()
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
 	}
 
-	mux := http.NewServeMux()
+	dsn := flag.String("dsn", "app_user:app_password@tcp(127.0.0.1:3306)/app_db?parseTime=true", "MySQL data source name")
+	db, err := openDB(*dsn)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+	defer db.Close()
 
-	fileServer := http.FileServer(http.Dir("../../ui/static/"))
-	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
+	app := &application{
+		logger:        logger,
+		snippets:      &models.SnippetModel{DB: db},
+		templateCache: templateCache,
+	}
 
-	mux.HandleFunc("GET /{$}", app.home)
-	mux.HandleFunc("GET /snippet/view/{id}/{$}", app.snippetView)
-	mux.HandleFunc("GET /snippet/create", app.snippetCreate)
-	mux.HandleFunc("POST /snippet/create", app.snippetCreatePost)
+	// mux := http.NewServeMux()
+
+	// fileServer := http.FileServer(http.Dir("../../ui/static/"))
+	// mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
+
+	// mux.HandleFunc("GET /{$}", app.home)
+	// mux.HandleFunc("GET /snippet/view/{id}/{$}", app.snippetView)
+	// mux.HandleFunc("GET /snippet/create", app.snippetCreate)
+	// mux.HandleFunc("POST /snippet/create", app.snippetCreatePost)
 
 	logger.Info("starting server", "addr", cfg.addr)
 
-	err := http.ListenAndServe(cfg.addr, mux)
-	logger.Error(err.Error())
+	mainErr := http.ListenAndServe(cfg.addr, app.routes())
+	logger.Error(mainErr.Error())
 	os.Exit(1)
+}
+
+func openDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Ping()
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+
+	return db, nil
 }
